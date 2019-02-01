@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}
   labels:
     module: analysis
+  namespace: default
 spec:
   type: NodePort
   ports:
