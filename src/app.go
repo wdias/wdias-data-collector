@@ -45,6 +45,12 @@ type PodMetricsList struct {
 	} `json:"items"`
 }
 
+// PodPerMin : Pods per minutes
+type PodPerMin struct {
+	Timestamp time.Time
+	NoPods    int8
+}
+
 func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
 	data, err := clientset.RESTClient().Get().AbsPath("apis/metrics.k8s.io/v1beta1/pods").DoRaw()
 	if err != nil {
@@ -54,31 +60,81 @@ func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
 	return err
 }
 
-func getPodsPerMinute(db *sql.DB) {
-	// Query
-	rows, err := db.Query("SELECT timestamp, helmChart, count(name) as noPods FROM metrics GROUP BY timestamp, helmChart")
+func getDistinctColumnValues(column string, db *sql.DB) []string {
+	rows, err := db.Query(fmt.Sprint("SELECT DISTINCT ", column, " FROM metrics"))
+	if err != nil {
+		fmt.Println("Unable to query data.", err.Error())
+	}
+	defer rows.Close()
+	var values []string
+	for rows.Next() {
+		var value string
+		err = rows.Scan(&value)
+		if err != nil {
+			fmt.Println("Unable to read data.", err.Error())
+			continue
+		}
+		values = append(values, value)
+	}
+	return values
+}
+
+func getPodsPerMinuteForHelmChart(helmChart string, db *sql.DB) []PodPerMin {
+	rows, err := db.Query(fmt.Sprint("SELECT timestamp, count(name) as noPods FROM metrics WHERE helmChart = '", helmChart, "' GROUP BY timestamp"))
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
 	defer rows.Close()
 
+	var podsPerMin []PodPerMin
 	for rows.Next() {
 		var timestamp time.Time
-		var helmChart string
 		var noPods int8
-		err = rows.Scan(&timestamp, &helmChart, &noPods)
+		err = rows.Scan(&timestamp, &noPods)
 		if err != nil {
 			fmt.Println("Unable to read data.", err.Error())
 			continue
 		}
-		fmt.Println("row:", timestamp, helmChart, noPods)
+		podsPerMin = append(podsPerMin, PodPerMin{Timestamp: timestamp, NoPods: noPods})
 	}
+	return podsPerMin
 }
 
 func main() {
+	// Create SQLite DB
+	db, err := sql.Open("sqlite3", "./wdias.db")
+	if err != nil {
+		fmt.Println("Unable to create Database. Exit.", err.Error())
+		return
+	}
+	defer db.Close()
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS metrics (
+		name VARCHAR(64) NULL, 
+		namespace VARCHAR(64) NULL, 
+		timestamp DATE NULL,
+		helmChart VARCHAR(64) NULL,
+		cpu VARCHAR(20) NULL,
+		memory VARCHAR(20) NULL,
+		PRIMARY KEY (name, timestamp)
+	)`)
+	if err != nil {
+		fmt.Println("Unable to create table. Exit.", err.Error())
+		return
+	}
+
 	app := iris.Default()
 
 	app.Get("/metrics", func(ctx iris.Context) {
+		timestamps := getDistinctColumnValues("timestamp", db)
+		fmt.Println("timestamps: ", timestamps)
+		helmCharts := getDistinctColumnValues("helmChart", db)
+		fmt.Println("helmCharts: ", helmCharts)
+		for _, helmChart := range helmCharts {
+			podsPerMin := getPodsPerMinuteForHelmChart(helmChart, db)
+			for _, podPerMin := range podsPerMin {
+				fmt.Println(helmChart, podPerMin.Timestamp, podPerMin.NoPods)
+			}
+		}
 		graph := chart.Chart{
 			XAxis: chart.XAxis{
 				Style:        chart.StyleShow(),
@@ -130,25 +186,6 @@ func main() {
 	// listen and serve on http://0.0.0.0:8080.
 	go app.Run(iris.Addr(":8080"))
 
-	db, err := sql.Open("sqlite3", "./wdias.db")
-	if err != nil {
-		fmt.Println("Unable to create Database. Exit.", err.Error())
-		return
-	}
-	defer db.Close()
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS metrics (
-		name VARCHAR(64) NULL, 
-		namespace VARCHAR(64) NULL, 
-		timestamp DATE NULL,
-		helmChart VARCHAR(64) NULL,
-		cpu VARCHAR(20) NULL,
-		memory VARCHAR(20) NULL,
-		PRIMARY KEY (name, timestamp)
-	)`)
-	if err != nil {
-		fmt.Println("Unable to create table. Exit.", err.Error())
-		return
-	}
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -162,7 +199,7 @@ func main() {
 
 	for {
 		time.Sleep(controlLoop * time.Second)
-		fmt.Println("Fetch data on ", time.Now().String())
+		fmt.Println("\nFetch data on ", time.Now().String())
 		stmt, err := db.Prepare("INSERT INTO metrics(name, namespace, timestamp, helmChart, cpu, memory) values(?,?,?,?,?,?)")
 		if err != nil {
 			fmt.Println("Unable to prepare insert data.", err.Error())
@@ -176,15 +213,14 @@ func main() {
 			continue
 		}
 		for _, m := range pods.Items {
-			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.String())
 			c := m.Containers[0]
+			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp, c.Name, c.Usage.CPU, c.Usage.Memory)
 			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp, c.Name, c.Usage.CPU, c.Usage.Memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
 			}
 		}
-		getPodsPerMinute(db)
 
 		time.Sleep(56 * time.Second)
 	}
