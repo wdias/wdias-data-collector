@@ -9,7 +9,7 @@ import (
 	"github.com/kataras/iris"
 	_ "github.com/mattn/go-sqlite3"
 	chart "github.com/wcharczuk/go-chart"
-	util "github.com/wcharczuk/go-chart/util"
+	"github.com/wcharczuk/go-chart/util"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -54,35 +54,66 @@ func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
 	return err
 }
 
+func getPodsPerMinute(db *sql.DB) {
+	// Query
+	rows, err := db.Query("SELECT timestamp, helmChart, count(name) as noPods FROM metrics GROUP BY timestamp, helmChart")
+	if err != nil {
+		fmt.Println("Unable to query data.", err.Error())
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var timestamp time.Time
+		var helmChart string
+		var noPods int8
+		err = rows.Scan(&timestamp, &helmChart, &noPods)
+		if err != nil {
+			fmt.Println("Unable to read data.", err.Error())
+			continue
+		}
+		fmt.Println("row:", timestamp, helmChart, noPods)
+	}
+}
+
 func main() {
 	app := iris.Default()
 
 	app.Get("/metrics", func(ctx iris.Context) {
 		graph := chart.Chart{
 			XAxis: chart.XAxis{
-				Style:        chart.StyleShow(), //enables / displays the x-axis
+				Style:        chart.StyleShow(),
 				TickPosition: chart.TickPositionBetweenTicks,
 				ValueFormatter: func(v interface{}) string {
 					typed := v.(float64)
 					typedDate := util.Time.FromFloat64(typed)
-					return fmt.Sprintf("%d-%d\n%d", typedDate.Month(), typedDate.Day(), typedDate.Year())
+					return fmt.Sprintf("%d:%d", typedDate.Hour(), typedDate.Minute())
 				},
 			},
 			YAxis: chart.YAxis{
-				Style: chart.StyleShow(), //enables / displays the y-axis
+				Style: chart.Style{Show: false},
 			},
 			YAxisSecondary: chart.YAxis{
-				Style: chart.StyleShow(), //enables / displays the secondary y-axis
+				Style: chart.StyleShow(),
 			},
 			Series: []chart.Series{
 				chart.ContinuousSeries{
-					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
-					YValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+					XValues: []float64{1.0, 1.0, 1.0, 1.0, 1.0},
+					YValues: []float64{10.0, 20.0, 30.0, 40.0, 50.0},
 				},
 				chart.ContinuousSeries{
 					YAxis:   chart.YAxisSecondary,
-					XValues: []float64{1.1, 2.2, 3.3, 4.4, 5.5},
+					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
 					YValues: []float64{50.0, 40.0, 30.0, 20.0, 10.0},
+				},
+				chart.ContinuousSeries{
+					YAxis:   chart.YAxisSecondary,
+					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+					YValues: []float64{30.0, 30.0, 20.0, 10.0, 10.0},
+				},
+				chart.ContinuousSeries{
+					YAxis:   chart.YAxisSecondary,
+					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+					YValues: []float64{5.0, 15.0, 20.0, 40.0, 100.0},
 				},
 			},
 		}
@@ -108,7 +139,10 @@ func main() {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS metrics (
 		name VARCHAR(64) NULL, 
 		namespace VARCHAR(64) NULL, 
-		timestamp DATE NULL, 
+		timestamp DATE NULL,
+		helmChart VARCHAR(64) NULL,
+		cpu VARCHAR(20) NULL,
+		memory VARCHAR(20) NULL,
 		PRIMARY KEY (name, timestamp)
 	)`)
 	if err != nil {
@@ -129,7 +163,7 @@ func main() {
 	for {
 		time.Sleep(controlLoop * time.Second)
 		fmt.Println("Fetch data on ", time.Now().String())
-		stmt, err := db.Prepare("INSERT INTO metrics(name, namespace, timestamp) values(?,?,?)")
+		stmt, err := db.Prepare("INSERT INTO metrics(name, namespace, timestamp, helmChart, cpu, memory) values(?,?,?,?,?,?)")
 		if err != nil {
 			fmt.Println("Unable to prepare insert data.", err.Error())
 			continue
@@ -143,31 +177,15 @@ func main() {
 		}
 		for _, m := range pods.Items {
 			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.String())
-			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp)
+			c := m.Containers[0]
+			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp, c.Name, c.Usage.CPU, c.Usage.Memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
 			}
 		}
-		// Query
-		rows, err := db.Query("SELECT * FROM metrics")
-		if err != nil {
-			fmt.Println("Unable to query data.", err.Error())
-			continue
-		}
-		defer rows.Close()
+		getPodsPerMinute(db)
 
-		for rows.Next() {
-			var name string
-			var namespace string
-			var timestamp time.Time
-			err = rows.Scan(&name, &namespace, &timestamp)
-			if err != nil {
-				fmt.Println("Unable to read data.", err.Error())
-				continue
-			}
-			fmt.Println("row:", name, namespace, timestamp)
-		}
 		time.Sleep(56 * time.Second)
 	}
 }
