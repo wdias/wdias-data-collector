@@ -8,8 +8,6 @@ import (
 
 	"github.com/kataras/iris"
 	_ "github.com/mattn/go-sqlite3"
-	chart "github.com/wcharczuk/go-chart"
-	"github.com/wcharczuk/go-chart/util"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -45,10 +43,16 @@ type PodMetricsList struct {
 	} `json:"items"`
 }
 
-// PodPerMin : Pods per minutes
-type PodPerMin struct {
-	Timestamp time.Time
-	NoPods    int8
+// PodPerHelmChart : Pods per HelmChart
+type PodPerHelmChart struct {
+	HelmChart string
+	NoPods    float64
+}
+
+// PodPerTimestamp : Pods per Timestamp
+type PodPerTimestamp struct {
+	Timestamp        time.Time
+	PodsPerHelmChart []PodPerHelmChart
 }
 
 func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
@@ -79,25 +83,44 @@ func getDistinctColumnValues(column string, db *sql.DB) []string {
 	return values
 }
 
-func getPodsPerMinuteForHelmChart(helmChart string, db *sql.DB) []PodPerMin {
-	rows, err := db.Query(fmt.Sprint("SELECT timestamp, count(name) as noPods FROM metrics WHERE helmChart = '", helmChart, "' GROUP BY timestamp"))
+func getDistinctTimestamps(db *sql.DB) []time.Time {
+	rows, err := db.Query(fmt.Sprint("SELECT DISTINCT timestamp FROM metrics"))
+	if err != nil {
+		fmt.Println("Unable to query data.", err.Error())
+	}
+	defer rows.Close()
+	var values []time.Time
+	for rows.Next() {
+		var value time.Time
+		err = rows.Scan(&value)
+		if err != nil {
+			fmt.Println("Unable to read data.", err.Error())
+			continue
+		}
+		values = append(values, value)
+	}
+	return values
+}
+
+func getPodsPerHelmChartForGivenMin(timestamp time.Time, db *sql.DB) []PodPerHelmChart {
+	rows, err := db.Query(fmt.Sprint("SELECT helmChart, count(name) as noPods FROM metrics WHERE timestamp = '", timestamp, "' GROUP BY helmChart"))
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
 	defer rows.Close()
 
-	var podsPerMin []PodPerMin
+	var podsPerHelmChart []PodPerHelmChart
 	for rows.Next() {
-		var timestamp time.Time
-		var noPods int8
-		err = rows.Scan(&timestamp, &noPods)
+		var helmChart string
+		var noPods float64
+		err = rows.Scan(&helmChart, &noPods)
 		if err != nil {
 			fmt.Println("Unable to read data.", err.Error())
 			continue
 		}
-		podsPerMin = append(podsPerMin, PodPerMin{Timestamp: timestamp, NoPods: noPods})
+		podsPerHelmChart = append(podsPerHelmChart, PodPerHelmChart{HelmChart: helmChart, NoPods: noPods})
 	}
-	return podsPerMin
+	return podsPerHelmChart
 }
 
 func main() {
@@ -125,57 +148,16 @@ func main() {
 	app := iris.Default()
 
 	app.Get("/metrics", func(ctx iris.Context) {
-		timestamps := getDistinctColumnValues("timestamp", db)
+		timestamps := getDistinctTimestamps(db)
 		fmt.Println("timestamps: ", timestamps)
 		helmCharts := getDistinctColumnValues("helmChart", db)
 		fmt.Println("helmCharts: ", helmCharts)
-		for _, helmChart := range helmCharts {
-			podsPerMin := getPodsPerMinuteForHelmChart(helmChart, db)
-			for _, podPerMin := range podsPerMin {
-				fmt.Println(helmChart, podPerMin.Timestamp, podPerMin.NoPods)
-			}
+		var podsPerTimestamp []PodPerTimestamp
+		for _, timestamp := range timestamps {
+			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, db)
+			podsPerTimestamp = append(podsPerTimestamp, PodPerTimestamp{Timestamp: timestamp, PodsPerHelmChart: podsPerHelmChart})
 		}
-		graph := chart.Chart{
-			XAxis: chart.XAxis{
-				Style:        chart.StyleShow(),
-				TickPosition: chart.TickPositionBetweenTicks,
-				ValueFormatter: func(v interface{}) string {
-					typed := v.(float64)
-					typedDate := util.Time.FromFloat64(typed)
-					return fmt.Sprintf("%d:%d", typedDate.Hour(), typedDate.Minute())
-				},
-			},
-			YAxis: chart.YAxis{
-				Style: chart.Style{Show: false},
-			},
-			YAxisSecondary: chart.YAxis{
-				Style: chart.StyleShow(),
-			},
-			Series: []chart.Series{
-				chart.ContinuousSeries{
-					XValues: []float64{1.0, 1.0, 1.0, 1.0, 1.0},
-					YValues: []float64{10.0, 20.0, 30.0, 40.0, 50.0},
-				},
-				chart.ContinuousSeries{
-					YAxis:   chart.YAxisSecondary,
-					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
-					YValues: []float64{50.0, 40.0, 30.0, 20.0, 10.0},
-				},
-				chart.ContinuousSeries{
-					YAxis:   chart.YAxisSecondary,
-					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
-					YValues: []float64{30.0, 30.0, 20.0, 10.0, 10.0},
-				},
-				chart.ContinuousSeries{
-					YAxis:   chart.YAxisSecondary,
-					XValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
-					YValues: []float64{5.0, 15.0, 20.0, 40.0, 100.0},
-				},
-			},
-		}
-
-		ctx.Header("Content-Type", "image/png")
-		graph.Render(chart.PNG, ctx)
+		ctx.JSON(podsPerTimestamp)
 	})
 
 	app.Get("/public/hc", func(ctx iris.Context) {
