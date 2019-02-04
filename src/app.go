@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/kataras/iris"
@@ -122,6 +123,12 @@ func getPodsPerHelmChartForGivenMin(timestamp string, db *sql.DB) []PodPerHelmCh
 	}
 	return podsPerHelmChart
 }
+func serve() {
+	cmd := exec.Command("npx", "serve", "-s", "build", "-l", "8082")
+	fmt.Println("Running command and waiting for it to finish...")
+	err := cmd.Run()
+	fmt.Println("Command finished with error: %v", err)
+}
 
 func main() {
 	// Create SQLite DB
@@ -172,6 +179,15 @@ func main() {
 	})
 	// listen and serve on http://0.0.0.0:8080.
 	go app.Run(iris.Addr(":8080"))
+
+	// Serve static files
+	// app2 := iris.New()
+	// app2.Favicon("./build/favicon.ico")
+	// app2.StaticWeb("/static/css", "./build/static/css")
+	// app2.StaticWeb("/static/js", "./build/static/js")
+	// app2.StaticWeb("/web", "./build")
+	// go app2.Run(iris.Addr(":8082"))
+	go serve()
 
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()

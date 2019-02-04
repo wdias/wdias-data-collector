@@ -1,3 +1,4 @@
 helm
-web/build
+web/public
+web/src
 web/node_modules

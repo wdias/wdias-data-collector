@@ -3,7 +3,7 @@ import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import './App.css';
 
-const dataServer = 'http://analysis.wdias.com'
+const dataServer = 'http://analysis-api.wdias.com'
 
 class App extends Component {
   constructor(props) {

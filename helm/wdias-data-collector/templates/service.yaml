@@ -12,5 +12,9 @@ spec:
       targetPort: 8080
       protocol: TCP
       name: http
+    - port: 8088
+      targetPort: 8082
+      protocol: TCP
+      name: http2
   selector:
     app: {{ .Release.Name }}

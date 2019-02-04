@@ -28,6 +28,9 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            - name: http2
+              containerPort: 8082
+              protocol: TCP
           # livenessProbe:
           #   httpGet:
           #     path: /public/hc
@@ -43,5 +46,5 @@ spec:
               memory: 128Mi
               cpu: 100m
             requests:
-              memory: 64Mi
-              cpu: 50m
+              memory: 128Mi
+              cpu: 100m
