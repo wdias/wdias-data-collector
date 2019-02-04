@@ -45,14 +45,14 @@ type PodMetricsList struct {
 
 // PodPerHelmChart : Pods per HelmChart
 type PodPerHelmChart struct {
-	HelmChart string
-	NoPods    float64
+	HelmChart string  `json:"helmChart"`
+	NoPods    float64 `json:"noPods"`
 }
 
 // PodPerTimestamp : Pods per Timestamp
 type PodPerTimestamp struct {
-	Timestamp        time.Time
-	PodsPerHelmChart []PodPerHelmChart
+	Timestamp        string            `json:"timestamp"`
+	PodsPerHelmChart []PodPerHelmChart `json:"podsPerHelmChart"`
 }
 
 func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
@@ -83,15 +83,15 @@ func getDistinctColumnValues(column string, db *sql.DB) []string {
 	return values
 }
 
-func getDistinctTimestamps(db *sql.DB) []time.Time {
+func getDistinctTimestamps(db *sql.DB) []string {
 	rows, err := db.Query(fmt.Sprint("SELECT DISTINCT timestamp FROM metrics"))
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
 	defer rows.Close()
-	var values []time.Time
+	var values []string
 	for rows.Next() {
-		var value time.Time
+		var value string
 		err = rows.Scan(&value)
 		if err != nil {
 			fmt.Println("Unable to read data.", err.Error())
@@ -102,7 +102,7 @@ func getDistinctTimestamps(db *sql.DB) []time.Time {
 	return values
 }
 
-func getPodsPerHelmChartForGivenMin(timestamp time.Time, db *sql.DB) []PodPerHelmChart {
+func getPodsPerHelmChartForGivenMin(timestamp string, db *sql.DB) []PodPerHelmChart {
 	rows, err := db.Query(fmt.Sprint("SELECT helmChart, count(name) as noPods FROM metrics WHERE timestamp = '", timestamp, "' GROUP BY helmChart"))
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
@@ -134,7 +134,7 @@ func main() {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS metrics (
 		name VARCHAR(64) NULL, 
 		namespace VARCHAR(64) NULL, 
-		timestamp DATE NULL,
+		timestamp VARCHAR(20) NULL,
 		helmChart VARCHAR(64) NULL,
 		cpu VARCHAR(20) NULL,
 		memory VARCHAR(20) NULL,
@@ -149,9 +149,7 @@ func main() {
 
 	app.Get("/metrics", func(ctx iris.Context) {
 		timestamps := getDistinctTimestamps(db)
-		fmt.Println("timestamps: ", timestamps)
-		helmCharts := getDistinctColumnValues("helmChart", db)
-		fmt.Println("helmCharts: ", helmCharts)
+		// helmCharts := getDistinctColumnValues("helmChart", db)
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
 			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, db)
@@ -196,8 +194,8 @@ func main() {
 		}
 		for _, m := range pods.Items {
 			c := m.Containers[0]
-			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp, c.Name, c.Usage.CPU, c.Usage.Memory)
-			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp, c.Name, c.Usage.CPU, c.Usage.Memory)
+			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02Z15:04:05T"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02Z15:04:05T"), c.Name, c.Usage.CPU, c.Usage.Memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
