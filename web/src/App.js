@@ -62,22 +62,22 @@ class App extends Component {
           </a>
         </header> */}
         <button onClick={() => this.loadData()}>Refresh</button>
-        <div className="App-header">
+        <header className="App-header">
           {this.state.helmCharts.map(chartName => {
             return (
-              <header key={`helmChart-${chartName}`}>
+              <div key={`helmChart-${chartName}`}>
                 <h5>{chartName}</h5>
-                <LineChart width={600} height={200} data={this.state.chartData} syncId="anyId" margin={{top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center'}}>
+                <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center'}}>
                   <CartesianGrid strokeDasharray="3 3"/>
                   <XAxis dataKey="name" padding={{left: 30, right: 30}}/>
                   <YAxis/>
                   <Tooltip/>
                   <Line type='monotone' dataKey={chartName} stroke='#8884d8' fill='#8884d8' />
                 </LineChart>
-              </header>
+              </div>
             );
           })}
-        </div>
+        </header>
       </div>
     );
   }
