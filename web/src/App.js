@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import './App.css';
 
 const dataServer = 'http://analysis.wdias.com'
@@ -9,25 +10,37 @@ class App extends Component {
     super(props);
     this.state = {
       chartData: [],
+      helmCharts: [],
     };
   }
+  componentDidMount() {
+    this.loadData();
+    setInterval(() => {
+      this.loadData();
+    }, 30 * 1000);
+  }
+  async loadCharts() {
+    const res = await axios.get(`${dataServer}/metrics/helmCharts`);
+    if(res.status === 200) {
+      this.setState({ helmCharts: res.data });
+    }
+  }
   async loadData() {
+    await this.loadCharts();
     const res = await axios.get(`${dataServer}/metrics`);
     if(res.status === 200) {
       const d = res.data;
-      console.log(d, d.length);
       const chartData = d.map(helmChart => {
         let col = {
-          name: helmChart.timestamp,
+          timestamp: helmChart.timestamp,
+          name: helmChart.timestamp.split('T')[1].replace(':00Z', ''),
         };
-        console.log('len: ', helmChart.podsPerHelmChart.length)
         for (const pod of helmChart.podsPerHelmChart) {
-          console.log(pod)
           col[pod.helmChart] = pod.noPods;
         }
         return col;
       });
-      console.log(this.state.data)
+      console.log("final:", chartData)
       this.setState({ chartData: chartData });
     }
   }
@@ -49,8 +62,21 @@ class App extends Component {
           </a>
         </header> */}
         <button onClick={() => this.loadData()}>Refresh</button>
-        <div>
-          <p>{JSON.stringify(this.state.chartData)}</p>
+        <div className="App-header">
+          {this.state.helmCharts.map(chartName => {
+            return (
+              <header key={`helmChart-${chartName}`}>
+                <h5>{chartName}</h5>
+                <LineChart width={600} height={200} data={this.state.chartData} syncId="anyId" margin={{top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center'}}>
+                  <CartesianGrid strokeDasharray="3 3"/>
+                  <XAxis dataKey="name" padding={{left: 30, right: 30}}/>
+                  <YAxis/>
+                  <Tooltip/>
+                  <Line type='monotone' dataKey={chartName} stroke='#8884d8' fill='#8884d8' />
+                </LineChart>
+              </header>
+            );
+          })}
         </div>
       </div>
     );

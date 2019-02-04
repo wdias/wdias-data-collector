@@ -148,6 +148,7 @@ func main() {
 	app := iris.Default()
 
 	app.Get("/metrics", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
 		timestamps := getDistinctTimestamps(db)
 		// helmCharts := getDistinctColumnValues("helmChart", db)
 		var podsPerTimestamp []PodPerTimestamp
@@ -156,6 +157,12 @@ func main() {
 			podsPerTimestamp = append(podsPerTimestamp, PodPerTimestamp{Timestamp: timestamp, PodsPerHelmChart: podsPerHelmChart})
 		}
 		ctx.JSON(podsPerTimestamp)
+	})
+
+	app.Get("/metrics/helmCharts", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
+		helmCharts := getDistinctColumnValues("helmChart", db)
+		ctx.JSON(helmCharts)
 	})
 
 	app.Get("/public/hc", func(ctx iris.Context) {
@@ -194,8 +201,8 @@ func main() {
 		}
 		for _, m := range pods.Items {
 			c := m.Containers[0]
-			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02Z15:04:05T"), c.Name, c.Usage.CPU, c.Usage.Memory)
-			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02Z15:04:05T"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:05Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:05Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
