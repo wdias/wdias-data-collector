@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import Dropdown from 'react-dropdown';
 import './App.css';
 
 const dataServer = 'http://analysis-api.wdias.com'
@@ -11,23 +12,26 @@ class App extends Component {
     this.state = {
       chartData: [],
       helmCharts: [],
+      namespace: 'default',
     };
   }
   componentDidMount() {
+    console.log('did mount:', this.state.namespace)
     this.loadData();
     setInterval(() => {
       this.loadData();
     }, 30 * 1000);
   }
-  async loadCharts() {
-    const res = await axios.get(`${dataServer}/metrics/helmCharts`);
+  async loadCharts(namespace) {
+    const res = await axios.get(`${dataServer}/metrics/${namespace === 'all' ? '' : `namespace/${namespace}/`}helmCharts`);
     if(res.status === 200) {
       this.setState({ helmCharts: res.data });
     }
   }
   async loadData() {
-    await this.loadCharts();
-    const res = await axios.get(`${dataServer}/metrics`);
+    const namespace = this.state.namespace;
+    await this.loadCharts(namespace);
+    const res = await axios.get(`${dataServer}/metrics${namespace === 'all' ? '' : '/namespace/'+namespace}`);
     if(res.status === 200) {
       const d = res.data;
       const chartData = d.map(helmChart => {
@@ -44,24 +48,19 @@ class App extends Component {
       this.setState({ chartData: chartData });
     }
   }
+  async onNamespaceChange(ns) {
+    this.setState({
+      ...this.state,
+      namespace: ns.value,
+    }, () => {this.loadData()});
+  }
   render() {
     return (
       <div className="App">
-        {/* <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header> */}
-        <button onClick={() => this.loadData()}>Refresh</button>
+        <div className="Menu">
+          <button onClick={() => this.loadData()}>Refresh</button>
+          <Dropdown options={['default', 'kube-system', 'all']} onChange={(val) => this.onNamespaceChange(val)} value={'default'} placeholder="Select an option" />
+        </div>
         <header className="App-header">
           {this.state.helmCharts.map(chartName => {
             return (
