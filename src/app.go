@@ -65,8 +65,12 @@ func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
 	return err
 }
 
-func getDistinctColumnValues(column string, db *sql.DB) []string {
-	rows, err := db.Query(fmt.Sprint("SELECT DISTINCT ", column, " FROM metrics"))
+func getDistinctColumnValues(column string, namespace string, db *sql.DB) []string {
+	q := fmt.Sprint("SELECT DISTINCT ", column, " FROM metrics")
+	if namespace != "" {
+		q = fmt.Sprint(q, " WHERE namespace = '", namespace, "'")
+	}
+	rows, err := db.Query(q)
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
@@ -84,8 +88,12 @@ func getDistinctColumnValues(column string, db *sql.DB) []string {
 	return values
 }
 
-func getDistinctTimestamps(db *sql.DB) []string {
-	rows, err := db.Query(fmt.Sprint("SELECT DISTINCT timestamp FROM metrics"))
+func getDistinctTimestamps(namespace string, db *sql.DB) []string {
+	q := fmt.Sprint("SELECT DISTINCT timestamp FROM metrics")
+	if namespace != "" {
+		q = fmt.Sprint(q, " WHERE namespace = '", namespace, "'")
+	}
+	rows, err := db.Query(q)
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
@@ -103,8 +111,14 @@ func getDistinctTimestamps(db *sql.DB) []string {
 	return values
 }
 
-func getPodsPerHelmChartForGivenMin(timestamp string, db *sql.DB) []PodPerHelmChart {
-	rows, err := db.Query(fmt.Sprint("SELECT helmChart, count(name) as noPods FROM metrics WHERE timestamp = '", timestamp, "' GROUP BY helmChart"))
+func getPodsPerHelmChartForGivenMin(timestamp string, namespace string, db *sql.DB) []PodPerHelmChart {
+	q := fmt.Sprint("SELECT helmChart, count(name) as noPods FROM metrics WHERE timestamp = '", timestamp, "'")
+	if namespace != "" {
+		q = fmt.Sprint(q, " AND namespace = '", namespace, "'")
+	}
+	q = fmt.Sprint(q, " GROUP BY helmChart")
+	fmt.Println("getPodsPerHelmChartForGivenMin q:", q)
+	rows, err := db.Query(q)
 	if err != nil {
 		fmt.Println("Unable to query data.", err.Error())
 	}
@@ -127,7 +141,7 @@ func serve() {
 	cmd := exec.Command("npx", "serve", "-s", "build", "-l", "8082")
 	fmt.Println("Running command and waiting for it to finish...")
 	err := cmd.Run()
-	fmt.Println("Command finished with error: %v", err)
+	fmt.Println("Command finished with error: ", err.Error())
 }
 
 func main() {
@@ -154,21 +168,39 @@ func main() {
 
 	app := iris.Default()
 
-	app.Get("/metrics", func(ctx iris.Context) {
+	app.Get("/metrics/namespace/{namespace:string}", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
-		timestamps := getDistinctTimestamps(db)
-		// helmCharts := getDistinctColumnValues("helmChart", db)
+		namespace := ctx.Params().Get("namespace")
+		timestamps := getDistinctTimestamps(namespace, db)
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
-			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, db)
+			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, namespace, db)
 			podsPerTimestamp = append(podsPerTimestamp, PodPerTimestamp{Timestamp: timestamp, PodsPerHelmChart: podsPerHelmChart})
 		}
 		ctx.JSON(podsPerTimestamp)
 	})
 
+	app.Get("/metrics", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
+		timestamps := getDistinctTimestamps("", db)
+		var podsPerTimestamp []PodPerTimestamp
+		for _, timestamp := range timestamps {
+			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, "", db)
+			podsPerTimestamp = append(podsPerTimestamp, PodPerTimestamp{Timestamp: timestamp, PodsPerHelmChart: podsPerHelmChart})
+		}
+		ctx.JSON(podsPerTimestamp)
+	})
+
+	app.Get("/metrics/namespace/{namespace:string}/helmCharts", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
+		namespace := ctx.Params().Get("namespace")
+		helmCharts := getDistinctColumnValues("helmChart", namespace, db)
+		ctx.JSON(helmCharts)
+	})
+
 	app.Get("/metrics/helmCharts", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
-		helmCharts := getDistinctColumnValues("helmChart", db)
+		helmCharts := getDistinctColumnValues("helmChart", "", db)
 		ctx.JSON(helmCharts)
 	})
 
