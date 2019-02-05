@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import Dropdown from 'react-dropdown';
+import { DropdownButton, Dropdown, Button } from 'react-bootstrap';
 import './App.css';
 
 const dataServer = 'http://analysis-api.wdias.com'
@@ -48,17 +48,22 @@ class App extends Component {
       this.setState({ chartData: chartData });
     }
   }
-  async onNamespaceChange(ns) {
+  async onNamespaceChange(namespace) {
     this.setState({
       ...this.state,
-      namespace: ns.value,
+      namespace,
     }, () => {this.loadData()});
   }
   render() {
     return (
       <div className="App">
         <div className="Menu">
-          <button onClick={() => this.loadData()}>Refresh</button>
+          <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
+          <DropdownButton id="dropdown-basic-button" title={this.state.namespace} size="lg">
+            <Dropdown.Item onClick={() => this.onNamespaceChange('default')}>Default</Dropdown.Item>
+            <Dropdown.Item onClick={() => this.onNamespaceChange('kube-system')}>Kube-System</Dropdown.Item>
+            <Dropdown.Item onClick={() => this.onNamespaceChange('all')}>All</Dropdown.Item>
+          </DropdownButton>
           <Dropdown options={['default', 'kube-system', 'all']} onChange={(val) => this.onNamespaceChange(val)} value={'default'} placeholder="Select an option" />
         </div>
         <header className="App-header">
