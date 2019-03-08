@@ -1,4 +1,4 @@
-FROM golang:1.11.4-alpine
+FROM golang:1.12.0-alpine
 
 WORKDIR /go/src/app
 RUN apk update && apk add git sqlite gcc g++ npm
