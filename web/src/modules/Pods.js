@@ -4,6 +4,7 @@ import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Button } from 'react-bootstrap';
 
+const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
 
 class Pods extends Component {
   constructor(props) {
@@ -69,10 +70,10 @@ class Pods extends Component {
             <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
             <YAxis />
             <Tooltip />
-            {this.state.helmCharts.map(chartName => <Line type='monotone' dataKey={chartName} stroke='#8884d8' fill='#8884d8' name={chartName} key={chartName} />)}
+            {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
-        {this.state.view === '/per-pod' && this.state.helmCharts.map(chartName => {
+        {this.state.view === '/per-pod' && this.state.helmCharts.map((chartName, i) => {
           return (
             <div key={`helmChart-${chartName}`}>
               <h5>{chartName}</h5>
@@ -81,7 +82,7 @@ class Pods extends Component {
                 <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
                 <YAxis />
                 <Tooltip />
-                <Line type='monotone' dataKey={chartName} stroke='#8884d8' fill='#8884d8' />
+                <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} />
               </LineChart>
             </div>
           );
