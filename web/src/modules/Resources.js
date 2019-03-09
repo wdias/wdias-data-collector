@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Button, DropdownButton, Dropdown } from 'react-bootstrap';
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
@@ -56,7 +56,7 @@ class Resources extends Component {
             return p + c.cpu.length > 1 ? parseInt(c.cpu.slice(0, -1)) : 0
           }, 0);
           col[`memory-${pod.helmChart}`] = pod.resourcesPerPod.reduce((p, c) => {
-            return p + parseInt(c.memory.slice(0, -2))
+            return p + parseInt(c.memory.slice(0, -2)) / 1024
           }, 0);
         }
         return col;
@@ -86,6 +86,7 @@ class Resources extends Component {
             <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
             <YAxis />
             <Tooltip />
+            <Legend />
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={`cpu-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
           <h5>Memory usage Per HelmChart</h5>
@@ -94,6 +95,7 @@ class Resources extends Component {
             <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
             <YAxis />
             <Tooltip />
+            <Legend />
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
@@ -104,9 +106,12 @@ class Resources extends Component {
               <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
-                <YAxis />
+                <YAxis yAxisId="left" label="CPU" />
+                <YAxis yAxisId="right" orientation="right" label="Memory" />
                 <Tooltip />
-                <Line type='monotone' dataKey={chartName} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} />
+                <Legend />
+                <Line yAxisId="left" type='monotone' dataKey={`cpu-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} />
+                <Line yAxisId="right" type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i + 1 % Colors.length]} fill={Colors[i % Colors.length]} />
               </LineChart>
             </div>
           );
