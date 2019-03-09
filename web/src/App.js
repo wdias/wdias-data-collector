@@ -10,8 +10,8 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      namespace: 'default',
-      route: '/pods' // '/pods', '/resources'
+      namespace: 'kube-system',
+      route: '/resources' // '/pods', '/resources'
     };
   }
   componentDidMount() {
