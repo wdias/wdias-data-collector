@@ -56,6 +56,25 @@ type PodPerTimestamp struct {
 	PodsPerHelmChart []PodPerHelmChart `json:"podsPerHelmChart"`
 }
 
+// ResourcesPerPod : Resources per Pod
+type ResourcesPerPod struct {
+	PodName string `json:"podName"`
+	CPU     string `json:"cpu"`
+	Memory  string `json:"memory"`
+}
+
+// ResourcesPerPodPerHelmChart : Resources per Pod per HelmChart
+type ResourcesPerPodPerHelmChart struct {
+	HelmChart       string            `json:"helmChart"`
+	ResourcesPerPod []ResourcesPerPod `json:"resourcesPerPod"`
+}
+
+// ResourcesPerPodPerHelmChartTimestamp : Resources per Pod per Timestamp
+type ResourcesPerPodPerHelmChartTimestamp struct {
+	Timestamp                   string                        `json:"timestamp"`
+	ResourcesPerPodPerHelmChart []ResourcesPerPodPerHelmChart `json:"resourcesPerPodPerHelmChart"`
+}
+
 func getMetrics(clientset *kubernetes.Clientset, pods *PodMetricsList) error {
 	data, err := clientset.RESTClient().Get().AbsPath("apis/metrics.k8s.io/v1beta1/pods").DoRaw()
 	if err != nil {
@@ -137,6 +156,57 @@ func getPodsPerHelmChartForGivenMin(timestamp string, namespace string, db *sql.
 	}
 	return podsPerHelmChart
 }
+
+func getResourcesPerPodPerHelmChartForGivenMin(timestamp string, namespace string, db *sql.DB) []ResourcesPerPodPerHelmChart {
+	q := fmt.Sprint("SELECT helmChart, name as podName, cpu, memory FROM metrics WHERE timestamp = '", timestamp, "'")
+	if namespace != "" {
+		q = fmt.Sprint(q, " AND namespace = '", namespace, "'")
+	}
+	q = fmt.Sprint(q, " ORDER BY helmChart")
+	fmt.Println("getResourcesPerPodPerHelmChartForGivenMin q:", q)
+	rows, err := db.Query(q)
+	if err != nil {
+		fmt.Println("Unable to query data.", err.Error())
+	}
+	defer rows.Close()
+
+	var resourcesPerPodsPerHelmChart []ResourcesPerPodPerHelmChart
+	prevHelmChart := ""
+	hasPrevious := false
+	var resourcesPerPod []ResourcesPerPod
+	for rows.Next() {
+		var helmChart string
+		var podName string
+		var cpu string
+		var memory string
+		err = rows.Scan(&helmChart, &podName, &cpu, &memory)
+		if err != nil {
+			fmt.Println("Unable to read data.", err.Error())
+			continue
+		}
+		if prevHelmChart == "" {
+			resourcesPerPod = append(resourcesPerPod, ResourcesPerPod{PodName: podName, CPU: cpu, Memory: memory})
+			prevHelmChart = helmChart
+			continue
+		}
+		if prevHelmChart == helmChart {
+			resourcesPerPod = append(resourcesPerPod, ResourcesPerPod{PodName: podName, CPU: cpu, Memory: memory})
+			hasPrevious = true
+		} else {
+			resourcesPerPodsPerHelmChart = append(resourcesPerPodsPerHelmChart, ResourcesPerPodPerHelmChart{HelmChart: prevHelmChart, ResourcesPerPod: resourcesPerPod})
+			resourcesPerPod = []ResourcesPerPod{}
+			resourcesPerPod = append(resourcesPerPod, ResourcesPerPod{PodName: podName, CPU: cpu, Memory: memory})
+			hasPrevious = false
+		}
+		prevHelmChart = helmChart
+		// resourcesPerPodsPerHelmChartTimestamp = append(resourcesPerPodsPerHelmChartTimestamp, PodPerHelmChart{HelmChart: helmChart, NoPods: noPods})
+	}
+	if hasPrevious {
+		resourcesPerPodsPerHelmChart = append(resourcesPerPodsPerHelmChart, ResourcesPerPodPerHelmChart{HelmChart: prevHelmChart, ResourcesPerPod: resourcesPerPod})
+	}
+	return resourcesPerPodsPerHelmChart
+}
+
 func serve() {
 	// https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b
 	// With npx, run the package without installing on the package.json
@@ -204,6 +274,29 @@ func main() {
 		ctx.Header("Access-Control-Allow-Origin", "*")
 		helmCharts := getDistinctColumnValues("helmChart", "", db)
 		ctx.JSON(helmCharts)
+	})
+
+	app.Get("/metrics/namespace/{namespace:string}/resources", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
+		namespace := ctx.Params().Get("namespace")
+		timestamps := getDistinctTimestamps(namespace, db)
+		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
+		for _, timestamp := range timestamps {
+			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, namespace, db)
+			resourcesPerPodsPerHelmChartTimestamp = append(resourcesPerPodsPerHelmChartTimestamp, ResourcesPerPodPerHelmChartTimestamp{Timestamp: timestamp, ResourcesPerPodPerHelmChart: resourcesPerPodsPerHelmChart})
+		}
+		ctx.JSON(resourcesPerPodsPerHelmChartTimestamp)
+	})
+
+	app.Get("/metrics/resources", func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*")
+		timestamps := getDistinctTimestamps("", db)
+		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
+		for _, timestamp := range timestamps {
+			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, "", db)
+			resourcesPerPodsPerHelmChartTimestamp = append(resourcesPerPodsPerHelmChartTimestamp, ResourcesPerPodPerHelmChartTimestamp{Timestamp: timestamp, ResourcesPerPodPerHelmChart: resourcesPerPodsPerHelmChart})
+		}
+		ctx.JSON(resourcesPerPodsPerHelmChartTimestamp)
 	})
 
 	app.Get("/public/hc", func(ctx iris.Context) {
