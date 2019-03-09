@@ -138,6 +138,8 @@ func getPodsPerHelmChartForGivenMin(timestamp string, namespace string, db *sql.
 	return podsPerHelmChart
 }
 func serve() {
+	// https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b
+	// With npx, run the package without installing on the package.json
 	cmd := exec.Command("npx", "serve", "-s", "build", "-l", "8082")
 	fmt.Println("Running command and waiting for it to finish...")
 	err := cmd.Run()

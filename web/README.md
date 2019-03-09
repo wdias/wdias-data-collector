@@ -1,5 +1,8 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+- `... && wdias build && cd helm/wdias-data-collector && wdias up`
+- Go to `http://analysis.wdias.com/`
+
 ## Available Scripts
 
 In the project directory, you can run:

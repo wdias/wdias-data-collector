@@ -25,6 +25,9 @@ class App extends Component {
   async loadCharts(namespace) {
     const res = await axios.get(`${dataServer}/metrics/${namespace === 'all' ? '' : `namespace/${namespace}/`}helmCharts`);
     if(res.status === 200) {
+      if (!res.data) {
+        return
+      }
       this.setState({ helmCharts: res.data });
     }
   }
@@ -34,6 +37,9 @@ class App extends Component {
     const res = await axios.get(`${dataServer}/metrics${namespace === 'all' ? '' : '/namespace/'+namespace}`);
     if(res.status === 200) {
       const d = res.data;
+      if(!d) {
+        return
+      }
       const chartData = d.map(helmChart => {
         let col = {
           timestamp: helmChart.timestamp,
