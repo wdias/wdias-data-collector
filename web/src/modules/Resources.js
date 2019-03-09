@@ -78,9 +78,9 @@ class Resources extends Component {
           <Dropdown.Item onClick={() => this.onViewChange('all')}>all</Dropdown.Item>
           <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
         </DropdownButton>
+        <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
         {this.state.view === 'all' && <div>
           <h5>CPU usage Per HelmChart</h5>
-          <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
           <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
