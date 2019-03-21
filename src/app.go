@@ -344,14 +344,14 @@ func main() {
 		}
 		for _, m := range pods.Items {
 			c := m.Containers[0]
-			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:05Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
-			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:05Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
 			}
 		}
 
-		time.Sleep(56 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
