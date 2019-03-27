@@ -55,7 +55,7 @@ class Resources extends Component {
           name: helmChart.timestamp.split('T')[1].replace(':00Z', ''),
         };
         for (const pod of helmChart.resourcesPerPodPerHelmChart) {
-          col[`cpu-${pod.helmChart}`] = Math.round(pod.resourcesPerPod.reduce((p, c) => {
+          col[`cpu-${pod.helmChart}`] = Math.ceil(pod.resourcesPerPod.reduce((p, c) => {
             return p + c.cpu.length > 1 ? parseInt(c.cpu.slice(0, -1)) : 0
           }, 0) / 1000000);
           col[`memory-${pod.helmChart}`] = pod.resourcesPerPod.reduce((p, c) => {
