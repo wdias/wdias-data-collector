@@ -1,8 +1,8 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 - `cd web && yarn run build && cd ..`
-- `wdias build helm/wdias-data-collector && wdias up helm/wdias-data-collector` or
-- `wdias build wdias-data-collector && helm del --purge wdias-data-collector && wdias helm_install wdias-data-collector/helm/wdias-data-collector`
+- `wdias build ~/wdias/wdias-data-collector && wdias up helm/wdias-data-collector`
+- Or `wdias build wdias-data-collector && helm del --purge wdias-data-collector && wdias helm_install wdias-data-collector/helm/wdias-data-collector`
 - Go to `http://analysis.wdias.com/`
 
 ## Available Scripts

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ .Release.Name }}-api
   labels:
     module: analysis
   namespace: default
@@ -12,6 +12,19 @@ spec:
       targetPort: 8080
       protocol: TCP
       name: http
+  selector:
+    app: {{ .Release.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    module: analysis
+  namespace: default
+spec:
+  type: NodePort
+  ports:
     - port: 8088
       targetPort: 8082
       protocol: TCP

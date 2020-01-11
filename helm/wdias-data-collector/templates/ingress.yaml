@@ -17,7 +17,7 @@ spec:
       paths:
         - path: /
           backend:
-            serviceName: {{ .Release.Name }}
+            serviceName: {{ .Release.Name }}-api
             servicePort: http
   - host: analysis.wdias.com
     http:

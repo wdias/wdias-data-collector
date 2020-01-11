@@ -9,9 +9,11 @@ RUN apk update && apk add git sqlite gcc g++ npm
 ENV GO111MODULE=on
 COPY go.mod go.sum ./
 RUN go mod download
-COPY ./src .
-COPY ./web/build ./build
+COPY ./bin/run.sh run.sh
 
+COPY ./src .
 RUN go build -o main .
 
-CMD ["./main"]
+COPY ./web/build ./build
+
+CMD ["./run.sh"]

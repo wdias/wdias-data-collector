@@ -314,7 +314,7 @@ func main() {
 	// app2.StaticWeb("/static/js", "./build/static/js")
 	// app2.StaticWeb("/web", "./build")
 	// go app2.Run(iris.Addr(":8082"))
-	go serve()
+	// go serve() -> taking too much time. Run as another container
 
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()

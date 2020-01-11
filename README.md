@@ -4,7 +4,7 @@ Kubernetes nodes and pods data collection for analysys.
 # Installation
 - Go to the Web Server `cd web` and build with `npm run build`
 - Go helm-chart dir `cd ./helm`
-- Build and deploy into K8s with `wdias build helm/wdias-data-collector & wdias up helm/wdias-data-collector`
+- Build and deploy into K8s with `wdias build ~/wdias/wdias-data-collector & wdias up helm/wdias-data-collector`
   - `wdias` refer to `wdias="~/wdias/wdias/bin/macos/dev"` from [wdias](https://github.com/wdias/wdias)
 
 ## Installation -> Minikube
