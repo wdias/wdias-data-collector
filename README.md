@@ -4,7 +4,7 @@ Kubernetes nodes and pods data collection for analysys.
 # Installation
 - Go to the Web Server `cd web` and build with `npm run build`
 - Go helm-chart dir `cd ./helm`
-- Build and deploy into K8s with `wdias build & wdias helm_install`
+- Build and deploy into K8s with `wdias build helm/wdias-data-collector & wdias up helm/wdias-data-collector`
   - `wdias` refer to `wdias="~/wdias/wdias/bin/macos/dev"` from [wdias](https://github.com/wdias/wdias)
 
 ## Installation -> Minikube
@@ -25,3 +25,7 @@ Access the API with `http://analysis-api.wdias.com/metrics`.
 - Connect to running pod: `kubectl get pods | grep 'wdias-data-collector' | awk '{print $1}' | xargs -o -I {} kubectl exec -it {} -- /bin/sh`
 - Connect to SQLLite DB - `sqllite3 wdias.db`
   - Cheet Sheet: `https://vicente-hernando.appspot.com/sqlite3-cheat-sheet`
+
+# Trouble shooting
+- [Update golang with Go modules](https://www.callicoder.com/docker-golang-image-container-example/)
+- [Update k8s client-go](https://github.com/kubernetes/client-go/blob/master/INSTALL.md#go-modules)

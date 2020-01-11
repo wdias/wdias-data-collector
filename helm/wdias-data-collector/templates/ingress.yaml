@@ -7,6 +7,10 @@ metadata:
     ingress.kubernetes.io/rewrite-target: "/$1"
   namespace: default
 spec:
+  tls:
+  - hosts:
+    - {{ .Release.Name }}.noondv.com
+    secretName: noondv.com-tls
   rules:
   - host: analysis-api.wdias.com
     http:
