@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Button, DropdownButton, Dropdown } from 'react-bootstrap';
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
@@ -80,6 +80,7 @@ class Pods extends Component {
             <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
             <YAxis />
             <Tooltip />
+            <Legend />
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
@@ -92,6 +93,7 @@ class Pods extends Component {
                 <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
                 <YAxis />
                 <Tooltip />
+                <Legend />
                 <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} />
               </LineChart>
             </div>
