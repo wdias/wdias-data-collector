@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { DropdownButton, Dropdown } from 'react-bootstrap';
 import Pods from './modules/Pods';
 import Resources from './modules/Resources';
-import './App.css';
+import './css/App.css';
+import './css/react-datetime.css';
 
 const dataServer = 'http://analysis-api.wdias.com'
 
