@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Button, DropdownButton, Dropdown } from 'react-bootstrap';
+import { Button, DropdownButton, Dropdown , Form, Row} from 'react-bootstrap';
+import Datetime from 'react-datetime';
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
 
@@ -12,7 +13,9 @@ class Resources extends Component {
     this.state = {
       chartData: [],
       helmCharts: [],
-      view: 'all' // 'all', 'per-pod'
+      view: 'all', // 'all', 'per-pod'
+      start: null,
+      end: null,
     };
   }
   componentDidMount() {
@@ -74,14 +77,30 @@ class Resources extends Component {
       view,
     });
   }
+  onDatetimeChange(start, end) {
+    if (start && end && start > end) {
+      start = this.state.start === start ? end.clone().subtract(30, 'minute') : start;
+      end = this.state.end === end ? start.clone().add(30, 'minute') : end;
+    }
+    console.log(start ? start.utc().format('YYYY-MM-DDTHH:mm:ss'): '', end ? end.utc().format('YYYY-MM-DDTHH:mm:ss'): '');
+    this.setState({
+      ...this.state,
+      start,
+      end,
+    });
+  }
   render() {
     return (
       <div>
-        <DropdownButton id="dropdown-view" title={this.state.view} size="lg">
-          <Dropdown.Item onClick={() => this.onViewChange('all')}>all</Dropdown.Item>
-          <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
-        </DropdownButton>
-        <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
+        <div className="Menu">
+          <DropdownButton id="dropdown-view" title={this.state.view} size="lg">
+            <Dropdown.Item onClick={() => this.onViewChange('all')}>all</Dropdown.Item>
+            <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
+          </DropdownButton>
+          <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
+          <div>Starts :</div><Datetime value={this.state.start} onChange={(d) => this.onDatetimeChange(d, this.state.end)}/>
+          <div>Ends :</div><Datetime value={this.state.end} onChange={(d) => this.onDatetimeChange(this.state.start, d)}/>
+        </div>
         {this.state.view === 'all' && <div>
           <h5>CPU usage Per HelmChart</h5>
           <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
