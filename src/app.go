@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/kataras/iris"
@@ -107,10 +108,28 @@ func getDistinctColumnValues(column string, namespace string, db *sql.DB) []stri
 	return values
 }
 
-func getDistinctTimestamps(namespace string, db *sql.DB) []string {
+func getDistinctTimestamps(namespace string, db *sql.DB, start string, end string) []string {
 	q := fmt.Sprint("SELECT DISTINCT timestamp FROM metrics")
+	var whereCause []string
 	if namespace != "" {
-		q = fmt.Sprint(q, " WHERE namespace = '", namespace, "'")
+		whereCause = append(whereCause, fmt.Sprint("namespace = '", namespace, "'"))
+	}
+	if start != "" {
+		_, err := time.Parse("2006-01-02T15:04:00Z", start)
+		if err != nil {
+			fmt.Println("Invalid start time.", err.Error())
+		}
+		whereCause = append(whereCause, fmt.Sprint("'", start, "' <= timestamp"))
+	}
+	if end != "" {
+		_, err := time.Parse("2006-01-02T15:04:00Z", end)
+		if err != nil {
+			fmt.Println("Invalid end time.", err.Error())
+		}
+		whereCause = append(whereCause, fmt.Sprint("timestamp <= '", end, "'"))
+	}
+	if len(whereCause) > 0 {
+		q = fmt.Sprint(q, " WHERE ", strings.Join(whereCause, " AND "))
 	}
 	rows, err := db.Query(q)
 	if err != nil {
@@ -243,7 +262,9 @@ func main() {
 	app.Get("/metrics/namespace/{namespace:string}", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
 		namespace := ctx.Params().Get("namespace")
-		timestamps := getDistinctTimestamps(namespace, db)
+		start := ctx.URLParamDefault("start", "")
+		end := ctx.URLParamDefault("end", "")
+		timestamps := getDistinctTimestamps(namespace, db, start, end)
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
 			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, namespace, db)
@@ -254,7 +275,9 @@ func main() {
 
 	app.Get("/metrics", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
-		timestamps := getDistinctTimestamps("", db)
+		start := ctx.URLParamDefault("start", "")
+		end := ctx.URLParamDefault("end", "")
+		timestamps := getDistinctTimestamps("", db, start, end)
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
 			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, "", db)
@@ -279,7 +302,9 @@ func main() {
 	app.Get("/metrics/namespace/{namespace:string}/resources", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
 		namespace := ctx.Params().Get("namespace")
-		timestamps := getDistinctTimestamps(namespace, db)
+		start := ctx.URLParamDefault("start", "")
+		end := ctx.URLParamDefault("end", "")
+		timestamps := getDistinctTimestamps(namespace, db, start, end)
 		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
 		for _, timestamp := range timestamps {
 			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, namespace, db)
@@ -290,7 +315,9 @@ func main() {
 
 	app.Get("/metrics/resources", func(ctx iris.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "*")
-		timestamps := getDistinctTimestamps("", db)
+		start := ctx.URLParamDefault("start", "")
+		end := ctx.URLParamDefault("end", "")
+		timestamps := getDistinctTimestamps("", db, start, end)
 		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
 		for _, timestamp := range timestamps {
 			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, "", db)
