@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kataras/iris"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
 	_ "github.com/mattn/go-sqlite3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -108,23 +109,25 @@ func getDistinctColumnValues(column string, namespace string, db *sql.DB) []stri
 	return values
 }
 
-func getDistinctTimestamps(namespace string, db *sql.DB, start string, end string) []string {
+func getDistinctTimestamps(namespace string, db *sql.DB, start string, end string) (values []string, err error) {
 	q := fmt.Sprint("SELECT DISTINCT timestamp FROM metrics")
 	var whereCause []string
 	if namespace != "" {
 		whereCause = append(whereCause, fmt.Sprint("namespace = '", namespace, "'"))
 	}
 	if start != "" {
-		_, err := time.Parse("2006-01-02T15:04:00Z", start)
+		_, err = time.Parse("2006-01-02T15:04:00Z", start)
 		if err != nil {
 			fmt.Println("Invalid start time.", err.Error())
+			return
 		}
 		whereCause = append(whereCause, fmt.Sprint("'", start, "' <= timestamp"))
 	}
 	if end != "" {
-		_, err := time.Parse("2006-01-02T15:04:00Z", end)
+		_, err = time.Parse("2006-01-02T15:04:00Z", end)
 		if err != nil {
 			fmt.Println("Invalid end time.", err.Error())
+			return
 		}
 		whereCause = append(whereCause, fmt.Sprint("timestamp <= '", end, "'"))
 	}
@@ -136,7 +139,6 @@ func getDistinctTimestamps(namespace string, db *sql.DB, start string, end strin
 		fmt.Println("Unable to query data.", err.Error())
 	}
 	defer rows.Close()
-	var values []string
 	for rows.Next() {
 		var value string
 		err = rows.Scan(&value)
@@ -146,7 +148,7 @@ func getDistinctTimestamps(namespace string, db *sql.DB, start string, end strin
 		}
 		values = append(values, value)
 	}
-	return values
+	return values, nil
 }
 
 func getPodsPerHelmChartForGivenMin(timestamp string, namespace string, db *sql.DB) []PodPerHelmChart {
@@ -264,7 +266,11 @@ func main() {
 		namespace := ctx.Params().Get("namespace")
 		start := ctx.URLParamDefault("start", "")
 		end := ctx.URLParamDefault("end", "")
-		timestamps := getDistinctTimestamps(namespace, db, start, end)
+		timestamps, err := getDistinctTimestamps(namespace, db, start, end)
+		if err != nil {
+			ctx.JSON(context.Map{"error": err.Error()})
+			return
+		}
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
 			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, namespace, db)
@@ -277,7 +283,11 @@ func main() {
 		ctx.Header("Access-Control-Allow-Origin", "*")
 		start := ctx.URLParamDefault("start", "")
 		end := ctx.URLParamDefault("end", "")
-		timestamps := getDistinctTimestamps("", db, start, end)
+		timestamps, err := getDistinctTimestamps("", db, start, end)
+		if err != nil {
+			ctx.JSON(context.Map{"error": err.Error()})
+			return
+		}
 		var podsPerTimestamp []PodPerTimestamp
 		for _, timestamp := range timestamps {
 			podsPerHelmChart := getPodsPerHelmChartForGivenMin(timestamp, "", db)
@@ -304,7 +314,11 @@ func main() {
 		namespace := ctx.Params().Get("namespace")
 		start := ctx.URLParamDefault("start", "")
 		end := ctx.URLParamDefault("end", "")
-		timestamps := getDistinctTimestamps(namespace, db, start, end)
+		timestamps, err := getDistinctTimestamps(namespace, db, start, end)
+		if err != nil {
+			ctx.JSON(context.Map{"error": err.Error()})
+			return
+		}
 		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
 		for _, timestamp := range timestamps {
 			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, namespace, db)
@@ -317,7 +331,11 @@ func main() {
 		ctx.Header("Access-Control-Allow-Origin", "*")
 		start := ctx.URLParamDefault("start", "")
 		end := ctx.URLParamDefault("end", "")
-		timestamps := getDistinctTimestamps("", db, start, end)
+		timestamps, err := getDistinctTimestamps("", db, start, end)
+		if err != nil {
+			ctx.JSON(context.Map{"error": err.Error()})
+			return
+		}
 		var resourcesPerPodsPerHelmChartTimestamp []ResourcesPerPodPerHelmChartTimestamp
 		for _, timestamp := range timestamps {
 			resourcesPerPodsPerHelmChart := getResourcesPerPodPerHelmChartForGivenMin(timestamp, "", db)
