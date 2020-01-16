@@ -43,7 +43,9 @@ class Resources extends Component {
   async loadData() {
     const namespace = this.props.namespace;
     await this.loadCharts(namespace);
-    const res = await axios.get(`${this.props.dataServer}/metrics/${namespace === 'all' ? '' : `namespace/${namespace}/`}resources`);
+    const {start, end} = this.state;
+    const query_string = [['start', start], ['end', end]].filter(k => k && k[1]).map(d => `${d[0]}=${d[1].format('YYYY-MM-DDTHH:mm[:00Z]')}`).join('&');
+    const res = await axios.get(`${this.props.dataServer}/metrics/${namespace === 'all' ? '' : `namespace/${namespace}/`}resources?${query_string}`);
     if (res.status === 200) {
       const d = res.data;
       if (!d) {
@@ -78,10 +80,15 @@ class Resources extends Component {
       view,
     });
   }
-  onDatetimeChange(start, end) {
-    if (start && end && start > end) {
-      start = this.state.start === start ? end.clone().subtract(30, 'minute') : start;
-      end = this.state.end === end ? start.clone().add(30, 'minute') : end;
+  onChangeDateTime(type, value) {
+    let {start, end} = this.state;
+    if (type === 'start' && start) {
+      start = value;
+      end = (end !== null && start > end) ? start.clone().add(30, 'minute') : end;
+    }
+    if (type === 'end' && end) {
+      end = value;
+      start = (start !== null && start > end) ? end.clone().subtract(30, 'minute') : start;
     }
     console.log(start ? start.utc().format('YYYY-MM-DDTHH:mm:ss'): '', end ? end.utc().format('YYYY-MM-DDTHH:mm:ss'): '');
     this.setState({
@@ -112,13 +119,16 @@ class Resources extends Component {
           <div>Starts :</div>
           <Datetime 
             value={this.state.start}
-            onChange={(d) => this.onDatetimeChange(d, this.state.end)}
+            onBlur={(d) => this.onChangeDateTime('start', d)}
+            onChange={(d) => this.onChangeDateTime('start', d)}
             onFocus={() => this.onFocusDatetime('start')}
+            strictParsing={false}
             />
           <div>Ends :</div>
           <Datetime
             value={this.state.end} 
-            onChange={(d) => this.onDatetimeChange(this.state.start, d)}
+            onBlur={(d) => this.onChangeDateTime('end', d)}
+            onChange={(d) => this.onChangeDateTime('end', d)}
             onFocus={() => this.onFocusDatetime('end')}
           />
         </div>
