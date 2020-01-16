@@ -4,6 +4,7 @@ import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Button, DropdownButton, Dropdown , Form, Row} from 'react-bootstrap';
 import Datetime from 'react-datetime';
+import moment from 'moment';
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
 
@@ -89,6 +90,16 @@ class Resources extends Component {
       end,
     });
   }
+  onFocusDatetime(type) {
+    const {start, end} = this.state;
+    console.log('on focus', type, start, end)
+    if(type === 'start' && this.state.start === null) {
+      this.setState({...this.state, start: (end === null ? new moment(): end.clone()).subtract(30, 'minute')});
+    }
+    if(type === 'end' && this.state.end === null) {
+      this.setState({...this.state, end: start === null ? new moment(): start.clone().add(30, 'minute')});
+    }
+  }
   render() {
     return (
       <div>
@@ -98,8 +109,18 @@ class Resources extends Component {
             <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
           </DropdownButton>
           <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
-          <div>Starts :</div><Datetime value={this.state.start} onChange={(d) => this.onDatetimeChange(d, this.state.end)}/>
-          <div>Ends :</div><Datetime value={this.state.end} onChange={(d) => this.onDatetimeChange(this.state.start, d)}/>
+          <div>Starts :</div>
+          <Datetime 
+            value={this.state.start}
+            onChange={(d) => this.onDatetimeChange(d, this.state.end)}
+            onFocus={() => this.onFocusDatetime('start')}
+            />
+          <div>Ends :</div>
+          <Datetime
+            value={this.state.end} 
+            onChange={(d) => this.onDatetimeChange(this.state.start, d)}
+            onFocus={() => this.onFocusDatetime('end')}
+          />
         </div>
         {this.state.view === 'all' && <div>
           <h5>CPU usage Per HelmChart</h5>
