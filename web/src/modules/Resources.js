@@ -113,7 +113,7 @@ class Resources extends Component {
       this.setState({...this.state, start: (end === null ? new moment(): end.clone()).subtract(30, 'minute')});
     }
     if(type === 'end' && this.state.end === null) {
-      this.setState({...this.state, end: start === null ? new moment(): start.clone().add(30, 'minute')});
+      this.setState({...this.state, end: start === null ? new moment(): (new moment() < start.clone().add(30, 'minute') ? new moment() : start.clone().add(30, 'minute'))});
     }
   }
   render() {
