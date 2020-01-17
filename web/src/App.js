@@ -11,8 +11,9 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      namespace: 'kube-system',
-      route: '/resources' // '/pods', '/resources'
+      route: '/resources', // '/pods', '/resources'
+      namespace: 'default',
+      view: 'all', // '/all', '/per-pod'
     };
   }
   componentDidMount() {
@@ -29,6 +30,12 @@ class App extends Component {
       route,
     });
   }
+  onViewChange(view) {
+    this.setState({
+      ...this.state,
+      view,
+    });
+  }
   render() {
     return (
       <div className="App">
@@ -37,17 +44,21 @@ class App extends Component {
             <Dropdown.Item onClick={() => this.onRouteChange('/pods')}>/pods</Dropdown.Item>
             <Dropdown.Item onClick={() => this.onRouteChange('/resources')}>/resources</Dropdown.Item>
           </DropdownButton>
-          <Dropdown options={['/pods', '/resources']} onChange={(val) => this.onRouteChange(val)} value={'/pods'} placeholder="Select an option" />
+          {/* <Dropdown options={['/pods', '/resources']} onChange={(val) => this.onRouteChange(val)} value={'/pods'} placeholder="Select an option" /> */}
           <DropdownButton id="dropdown-namespace" title={this.state.namespace} size="lg">
             <Dropdown.Item onClick={() => this.onNamespaceChange('default')}>Default</Dropdown.Item>
             <Dropdown.Item onClick={() => this.onNamespaceChange('kube-system')}>Kube-System</Dropdown.Item>
             <Dropdown.Item onClick={() => this.onNamespaceChange('all')}>All</Dropdown.Item>
           </DropdownButton>
-          <Dropdown options={['default', 'kube-system', 'all']} onChange={(val) => this.onNamespaceChange(val)} value={'default'} placeholder="Select an option" />
+          {/* <Dropdown options={['default', 'kube-system', 'all']} onChange={(val) => this.onNamespaceChange(val)} value={'default'} placeholder="Select an option" /> */}
+          <DropdownButton id="dropdown-view" title={this.state.view} size="lg">
+            <Dropdown.Item onClick={() => this.onViewChange('all')}>all</Dropdown.Item>
+            <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
+          </DropdownButton>
         </div>
         <header className="App-header">
-          {this.state.route === '/pods' && <Pods namespace={this.state.namespace} dataServer={dataServer} />}
-          {this.state.route === '/resources' && <Resources namespace={this.state.namespace} dataServer={dataServer} />}
+          {this.state.route === '/pods' && <Pods namespace={this.state.namespace} view={this.state.view} dataServer={dataServer} />}
+          {this.state.route === '/resources' && <Resources namespace={this.state.namespace} view={this.state.view} dataServer={dataServer} />}
         </header>
       </div>
     );

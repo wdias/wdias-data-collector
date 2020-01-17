@@ -16,7 +16,6 @@ class Resources extends Component {
       chartData: [],
       helmCharts: [],
       timeoutRef: undefined,
-      view: 'all', // 'all', 'per-pod'
       start: null,
       end: null,
     };
@@ -83,12 +82,6 @@ class Resources extends Component {
       this.setState({ chartData: chartData });
     }
   }
-  onViewChange(view) {
-    this.setState({
-      ...this.state,
-      view,
-    });
-  }
   onChangeDateTime(type, value) {
     let {start, end} = this.state;
     if (type === 'start' && start) {
@@ -122,10 +115,6 @@ class Resources extends Component {
     return (
       <div>
         <div className="Menu">
-          <DropdownButton id="dropdown-view" title={this.state.view} size="lg">
-            <Dropdown.Item onClick={() => this.onViewChange('all')}>all</Dropdown.Item>
-            <Dropdown.Item onClick={() => this.onViewChange('per-pod')}>per-pod</Dropdown.Item>
-          </DropdownButton>
           <Button variant="outline-primary" onClick={() => this.loadData()}>Refresh</Button>
           <div>Starts :</div>
           <Datetime 
@@ -143,7 +132,7 @@ class Resources extends Component {
             onFocus={() => this.onFocusDatetime('end')}
           />
         </div>
-        {this.state.view === 'all' && <div>
+        {this.props.view === 'all' && <div>
           <h5>CPU usage Per HelmChart</h5>
           <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -163,7 +152,7 @@ class Resources extends Component {
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
-        {this.state.view === 'per-pod' && Object.keys(PodGroups).map((groupName, j) => {
+        {this.props.view === 'per-pod' && Object.keys(PodGroups).map((groupName, j) => {
           if (!PodGroups[groupName].find(k => this.state.helmCharts.includes(k))) {
             return
           }
@@ -198,11 +187,13 @@ class Resources extends Component {
 
 Resources.propTypes = {
   namespace: PropTypes.string,
+  view: PropTypes.string,
   dataServer: PropTypes.string
 }
 
 Resources.defaultProps = {
-  namespace: 'dafault'
+  namespace: 'dafault',
+  view: 'all'
 }
 
 export default Resources;
