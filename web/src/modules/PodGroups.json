@@ -37,7 +37,8 @@
     ],
     "test": [
         "metrics-server",
+        "wdias-performance-test",
         "wdias-data-collector",
-        "wdias-performance-test"
+        "wdias-data-collector-api"
     ]
 }
