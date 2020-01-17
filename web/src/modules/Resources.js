@@ -15,6 +15,7 @@ class Resources extends Component {
     this.state = {
       chartData: [],
       helmCharts: [],
+      timeoutRef: undefined,
       view: 'all', // 'all', 'per-pod'
       start: null,
       end: null,
@@ -23,13 +24,20 @@ class Resources extends Component {
   componentDidMount() {
     console.log('did mount:', this.props.namespace)
     this.loadData();
-    setInterval(() => {
+    const timeoutRef = setInterval(() => {
       this.loadData();
     }, 30 * 1000);
+    this.setState({...this.state, timeoutRef});
   }
   componentDidUpdate(prevProps) {
     if (this.props.namespace !== prevProps.namespace) {
       this.loadData();
+    }
+  }
+  componentWillUnmount() {
+    console.log('will unmount:', this.props.namespace);
+    if (this.state.timeoutRef) {
+      clearInterval(this.state.timeoutRef);
     }
   }
   async loadCharts(namespace) {
