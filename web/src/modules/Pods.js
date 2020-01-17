@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'r
 import { Button, DropdownButton, Dropdown } from 'react-bootstrap';
 import Datetime from 'react-datetime';
 import moment from 'moment';
+import PodGroups from './PodGroups.json'
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
 
@@ -14,6 +15,7 @@ class Pods extends Component {
     this.state = {
       chartData: [],
       helmCharts: [],
+      timeoutRef: undefined,
       view: 'all', // '/all', '/per-pod'
       start: null,
       end: null,
@@ -22,13 +24,20 @@ class Pods extends Component {
   componentDidMount() {
     console.log('did mount:', this.props.namespace)
     this.loadData();
-    setInterval(() => {
+    const timeoutRef = setInterval(() => {
       this.loadData();
     }, 30 * 1000);
+    this.setState({...this.state, timeoutRef});
   }
   componentDidUpdate(prevProps) {
     if (this.props.namespace !== prevProps.namespace) {
       this.loadData();
+    }
+  }
+  componentWillUnmount() {
+    console.log('will unmount:', this.props.namespace);
+    if (this.state.timeoutRef) {
+      clearInterval(this.state.timeoutRef);
     }
   }
   async loadCharts(namespace) {
@@ -99,6 +108,8 @@ class Pods extends Component {
     });
   }
   render() {
+    const PodList = Object.values(PodGroups).reduce((prev, curr) => prev.concat(curr), []);
+    PodGroups['other'] = this.state.helmCharts.filter(k => !PodList.includes(k));
     return (
       <div>
         <div className="Menu">
@@ -134,18 +145,29 @@ class Pods extends Component {
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
-        {this.state.view === 'per-pod' && this.state.helmCharts.map((chartName, i) => {
+        {this.state.view === 'per-pod' && Object.keys(PodGroups).map((groupName, j) => {
+          if (!PodGroups[groupName].find(k => this.state.helmCharts.includes(k))) {
+            return
+          }
           return (
-            <div key={`helmChart-${chartName}`}>
-              <h5>{chartName}</h5>
-              <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} />
-              </LineChart>
+            <div key={`chartGroup-${groupName}`}>
+              <hr/>
+              <h3>{groupName.toUpperCase()}</h3>
+              {PodGroups[groupName].filter(k => this.state.helmCharts.includes(k)).map((chartName, i) => {
+                return (
+                  <div key={`helmChart-${chartName}`}>
+                    <h5>{chartName}</h5>
+                    <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type='monotone' dataKey={chartName} stroke={Colors[i%Colors.length]} fill={Colors[i%Colors.length]} />
+                    </LineChart>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
