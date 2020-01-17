@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+# /build -- avoid build at docker container to due to taking lots of time
 
 # misc
 .DS_Store
