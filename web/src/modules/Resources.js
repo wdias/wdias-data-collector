@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Button, DropdownButton, Dropdown , Form, Row} from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 import Datetime from 'react-datetime';
 import moment from 'moment';
 import PodGroups from './PodGroups.json'
@@ -111,7 +111,7 @@ class Resources extends Component {
   }
   render() {
     const PodList = Object.values(PodGroups).reduce((prev, curr) => prev.concat(curr), []);
-    PodGroups['other'] = this.state.helmCharts.filter(k => !PodList.includes(k));
+    const Groups = {...PodGroups, 'other': this.state.helmCharts.filter(k => !PodList.includes(k))};
     return (
       <div>
         <div className="Menu">
@@ -152,15 +152,15 @@ class Resources extends Component {
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
-        {this.props.view === 'per-pod' && Object.keys(PodGroups).map((groupName, j) => {
-          if (!PodGroups[groupName].find(k => this.state.helmCharts.includes(k))) {
+        {this.props.view === 'per-pod' && Object.keys(Groups).map((groupName, j) => {
+          if (!Groups[groupName].find(k => this.state.helmCharts.includes(k))) {
             return
           }
           return (
             <div key={`chartGroup-${groupName}`}>
               <hr/>
               <h3>{groupName.toUpperCase()}</h3>
-              {PodGroups[groupName].filter(k => this.state.helmCharts.includes(k)).map((chartName, i) => {
+              {Groups[groupName].filter(k => this.state.helmCharts.includes(k)).map((chartName, i) => {
                 return (
                   <div key={`helmChart-${chartName}`}>
                     <h5>{chartName}</h5>
