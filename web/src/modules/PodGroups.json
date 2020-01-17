@@ -1,0 +1,43 @@
+{
+    "core" : [
+        "adapter-metadata",
+        "adapter-status",
+        "adapter-query",
+        "adapter-scalar",
+        "adapter-vector",
+        "adapter-grid"
+    ],
+    "databases" : [
+        "adapter-extension-mysql",
+        "adapter-metadata-mysql",
+        "adapter-redis",
+        "adapter-query-mongodb",
+        "adapter-scalar-influxdb",
+        "adapter-vector-influxdb"
+    ],
+    "import": [
+        "import-ascii-grid-binary",
+        "import-ascii-grid-upload",
+        "import-json-raw"
+    ],
+    "export": [
+        "export-json-raw",
+        "export-netcdf-binary"
+    ],
+    "extension": [
+        "adapter-extension",
+        "extension-handler",
+        "extension-scheduler",
+        "extension-interpolation",
+        "extension-transformation",
+        "extension-validation",
+        "interpolation-serial-linear",
+        "transformation-aggregate-accumulative",
+        "validation-min-non-missing-values-check"
+    ],
+    "test": [
+        "metrics-server",
+        "wdias-data-collector",
+        "wdias-performance-test"
+    ]
+}

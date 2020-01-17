@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'r
 import { Button, DropdownButton, Dropdown , Form, Row} from 'react-bootstrap';
 import Datetime from 'react-datetime';
 import moment from 'moment';
+import PodGroups from './PodGroups.json'
 
 const Colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000'];
 
@@ -108,6 +109,8 @@ class Resources extends Component {
     }
   }
   render() {
+    const PodList = Object.values(PodGroups).reduce((prev, curr) => prev.concat(curr), []);
+    PodGroups['other'] = this.state.helmCharts.filter(k => !PodList.includes(k));
     return (
       <div>
         <div className="Menu">
@@ -152,20 +155,31 @@ class Resources extends Component {
             {this.state.helmCharts.map((chartName, i) => <Line type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} name={chartName} key={chartName} />)}
           </LineChart>
         </div>}
-        {this.state.view === 'per-pod' && this.state.helmCharts.map((chartName, i) => {
+        {this.state.view === 'per-pod' && Object.keys(PodGroups).map((groupName, j) => {
+          if (!PodGroups[groupName].find(k => this.state.helmCharts.includes(k))) {
+            return
+          }
           return (
-            <div key={`helmChart-${chartName}`}>
-              <h5>{chartName}</h5>
-              <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
-                <YAxis yAxisId="left" label="CPU" />
-                <YAxis yAxisId="right" orientation="right" label="Memory" />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type='monotone' dataKey={`cpu-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} />
-                <Line yAxisId="right" type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i + 1 % Colors.length]} fill={Colors[i % Colors.length]} />
-              </LineChart>
+            <div key={`chartGroup-${groupName}`}>
+              <hr/>
+              <h3>{groupName.toUpperCase()}</h3>
+              {PodGroups[groupName].filter(k => this.state.helmCharts.includes(k)).map((chartName, i) => {
+                return (
+                  <div key={`helmChart-${chartName}`}>
+                    <h5>{chartName}</h5>
+                    <LineChart width={1000} height={200} data={this.state.chartData} syncId="anyId" margin={{ top: 10, right: 30, left: 0, bottom: 0, 'text-align': 'center' }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
+                      <YAxis yAxisId="left" label="CPU" />
+                      <YAxis yAxisId="right" orientation="right" label="Memory" />
+                      <Tooltip />
+                      <Legend />
+                      <Line yAxisId="left" type='monotone' dataKey={`cpu-${chartName}`} stroke={Colors[i % Colors.length]} fill={Colors[i % Colors.length]} />
+                      <Line yAxisId="right" type='monotone' dataKey={`memory-${chartName}`} stroke={Colors[i + 1 % Colors.length]} fill={Colors[i % Colors.length]} />
+                    </LineChart>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
