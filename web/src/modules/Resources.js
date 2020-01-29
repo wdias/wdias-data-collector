@@ -106,7 +106,9 @@ class Resources extends Component {
       this.setState({...this.state, start: (end === null ? new moment(): end.clone()).subtract(30, 'minute')});
     }
     if(type === 'end' && this.state.end === null) {
-      this.setState({...this.state, end: start === null ? new moment(): (new moment() < start.clone().add(30, 'minute') ? new moment() : start.clone().add(30, 'minute'))});
+      const lastTimestamp = this.state.chartData.reduceRight((prev, curr) => moment.max(prev, new moment(curr.timestamp)), new moment('1970-01-01T00:00:00Z'));
+      console.log('lastTimestamp: ', lastTimestamp.format('YYYY-MM-DDTHH:mm:ss'));
+      this.setState({...this.state, end: start === null ? lastTimestamp: (new moment() < start.clone().add(30, 'minute') ? new moment() : start.clone().add(30, 'minute'))});
     }
   }
   render() {
