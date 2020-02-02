@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/context"
@@ -388,9 +389,19 @@ func main() {
 			continue
 		}
 		for _, m := range pods.Items {
-			c := m.Containers[0]
-			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
-			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), c.Name, c.Usage.CPU, c.Usage.Memory)
+			helmChart := m.Containers[0].Name
+			cpu := 0
+			memory := 0
+			for _, c := range m.Containers {
+				c1, err1 := strconv.Atoi(strings.TrimSuffix(c.Usage.CPU, "n"))
+				mem1, err2 := strconv.Atoi(strings.TrimSuffix(c.Usage.Memory, "Ki"))
+				if err1 == nil && err2 == nil {
+					cpu += c1
+					memory += mem1
+				}
+			}
+			fmt.Println(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), helmChart, cpu, memory)
+			_, err = stmt.Exec(m.Metadata.Name, m.Metadata.Namespace, m.Timestamp.Format("2006-01-02T15:04:00Z"), helmChart, cpu, memory)
 			if err != nil {
 				fmt.Println("Unable to insert data.", err.Error())
 				continue
