@@ -393,6 +393,9 @@ func main() {
 			cpu := 0
 			memory := 0
 			for _, c := range m.Containers {
+				if strings.HasPrefix(m.Metadata.Name, c.Name) {
+					helmChart = c.Name
+				}
 				c1, err1 := strconv.Atoi(strings.TrimSuffix(c.Usage.CPU, "n"))
 				mem1, err2 := strconv.Atoi(strings.TrimSuffix(c.Usage.Memory, "Ki"))
 				if err1 == nil && err2 == nil {
