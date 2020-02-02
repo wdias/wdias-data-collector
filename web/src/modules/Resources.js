@@ -70,11 +70,11 @@ class Resources extends Component {
         };
         for (const pod of helmChart.resourcesPerPodPerHelmChart) {
           col[`cpu-${pod.helmChart}`] = Math.ceil(pod.resourcesPerPod.reduce((p, c) => {
-            return p + c.cpu.length > 1 ? parseInt(c.cpu.slice(0, -1)) : 0
-          }, 0) / 1000000);
-          col[`memory-${pod.helmChart}`] = pod.resourcesPerPod.reduce((p, c) => {
-            return p + parseInt(c.memory.slice(0, -2)) / 1024
-          }, 0);
+            return p + parseInt(c.cpu);
+          }, 0) / (1000 * 1000));
+          col[`memory-${pod.helmChart}`] = Math.ceil(pod.resourcesPerPod.reduce((p, c) => {
+            return p + parseInt(c.memory);
+          }, 0) / 1024);
         }
         return col;
       });
